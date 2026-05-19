@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+ <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <edmx:Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <!-- Diagram content (shape and connector positions) -->
+    <edmx:Diagrams>
+      <Diagram DiagramId="b8d1bdb5f80e4d608a3db6fa162cdfb6" Name="Diagram1">
+        <EntityTypeShape EntityType="SwiftModel.AccountInvoice" Width="1.5" PointX="8.25" PointY="1.125" />
+        <EntityTypeShape EntityType="SwiftModel.AccountInvoiceDetail" Width="1.5" PointX="10.5" PointY="18" />
+        <EntityTypeShape EntityType="SwiftModel.Cart" Width="1.5" PointX="3" PointY="2.25" />
+        <EntityTypeShape EntityType="SwiftModel.Company" Width="1.5" PointX="0.75" PointY="11.875" />
+        <EntityTypeShape EntityType="SwiftModel.CustomerPayment" Width="1.5" PointX="10.75" PointY="0.75" />
+        <EntityTypeShape EntityType="SwiftModel.ProcurementCategory" Width="1.5" PointX="5.25" PointY="10.875" />
+        <EntityTypeShape EntityType="SwiftModel.ProcurementCategoryVendor" Width="1.5" PointX="7.5" PointY="11" />
+        <EntityTypeShape EntityType="SwiftModel.ProductImage" Width="1.5" PointX="7.5" PointY="18.25" />
+        <EntityTypeShape EntityType="SwiftModel.Product" Width="1.5" PointX="5.25" PointY="14" />
+        <EntityTypeShape EntityType="SwiftModel.ProductVariant" Width="1.5" PointX="7.5" PointY="27.75" />
+        <EntityTypeShape EntityType="SwiftModel.ShippingInfo" Width="1.5" PointX="10.75" PointY="6.75" />
+        <EntityTypeShape EntityType="SwiftModel.ShoppingCartDetail" Width="1.5" PointX="7.5" PointY="15.125" />
+        <EntityTypeShape EntityType="SwiftModel.Store" Width="1.5" PointX="3" PointY="6.875" />
+        <AssociationConnector Association="SwiftModel.FK_AccountInvoiceDetails_AccountInvoice" />
+        <AssociationConnector Association="SwiftModel.FK_AccountInvoiceDetails_Products" />
+        <AssociationConnector Association="SwiftModel.FK_Cart_Company" />
+        <AssociationConnector Association="SwiftModel.FK_Store_Company" />
+        <AssociationConnector Association="SwiftModel.FK_ProcurementCategory_Store" />
+        <AssociationConnector Association="SwiftModel.FK_ProcurementCategoryVendor_ProcurementCategory" />
+        <AssociationConnector Association="SwiftModel.FK_ProductImages_Products" />
+        <AssociationConnector Association="SwiftModel.FK_Products_Store" />
+        <AssociationConnector Association="SwiftModel.FK_ProductVariant_Products" />
+        <AssociationConnector Association="SwiftModel.FK_ShoppingCartDetails_Products" />
+        <EntityTypeShape EntityType="SwiftModel.Customer" Width="1.5" PointX="5.25" PointY="29.125" />
+        <AssociationConnector Association="SwiftModel.FK_AccountInvoice_Customer" />
+        <AssociationConnector Association="SwiftModel.FK_AccountInvoicePayment_Customer" />
+        <AssociationConnector Association="SwiftModel.FK_Customer_Store" />
+        <EntityTypeShape EntityType="SwiftModel.ProductCategoryMaster" Width="1.5" PointX="5.375" PointY="0.75" />
+        <EntityTypeShape EntityType="SwiftModel.ProductCategory" Width="1.5" PointX="10.625" PointY="11" />
+        <AssociationConnector Association="SwiftModel.FK_ProductCategory_Company" />
+        <AssociationConnector Association="SwiftModel.FK_ProductCategory_ProductCategoryMaster" />
+        <AssociationConnector Association="SwiftModel.FK_Products_ProductCategory" />
+      </Diagram>
+    </edmx:Diagrams>
+  </edmx:Designer>
+</edmx:Edmx>
