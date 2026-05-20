@@ -316,9 +316,7 @@ namespace SwiftEcom.Services
             try
             {
                 var customer = db.Customers.FirstOrDefault(c => c.Username == model.Username &&
-        db.Stores.Any(s =>
-            s.ID == c.MyStore &&
-            s.MyCompany == TenantContext.CompanyId));
+                                db.Stores.Any(s => s.ID == c.MyStore && s.ID == TenantContext.StoreId));
                 if (customer == null)
                     return new ApiResponse<LoginResponseDTO> { Success = false, Message = "Invalid username or password" };
 
@@ -362,8 +360,7 @@ namespace SwiftEcom.Services
             {
                 var customer = db.Customers.FirstOrDefault(c => c.CustomerID == customerID &&
                     db.Stores.Any(s =>
-                        s.ID == c.MyStore &&
-                        s.MyCompany == TenantContext.CompanyId));
+                        s.ID == c.MyStore && s.ID == TenantContext.StoreId));
                             if (customer == null)
                     return new ApiResponse<string> { Success = false, Message = "Customer not found" };
 
@@ -390,8 +387,7 @@ namespace SwiftEcom.Services
             {
                 var customer = db.Customers.FirstOrDefault(c => c.CustomerID == customerID &&
                 db.Stores.Any(s =>
-                    s.ID == c.MyStore &&
-                    s.MyCompany == TenantContext.CompanyId));
+                    s.ID == c.MyStore && s.ID == TenantContext.StoreId));
                 if (customer == null)
                     return new ApiResponse<CustomerDTO> { Success = false, Message = "Customer not found" };
 
@@ -414,8 +410,7 @@ namespace SwiftEcom.Services
             {
                 var customer = db.Customers.FirstOrDefault(c => c.CustomerID == model.CustomerID &&
                 db.Stores.Any(s =>
-                    s.ID == c.MyStore &&
-                    s.MyCompany == TenantContext.CompanyId));
+                    s.ID == c.MyStore && s.ID == TenantContext.StoreId));
                 if (customer == null)
                     return new ApiResponse<CustomerDTO> { Success = false, Message = "Customer not found" };
 
@@ -454,8 +449,7 @@ namespace SwiftEcom.Services
                 var products = db.Products
                     .Where(p => p.ActiveStatus == "Active" && p.Status == "Active" &&
                     db.Stores.Any(s =>
-                        s.ID == p.MyStore &&
-                        s.MyCompany == TenantContext.CompanyId))
+                        s.ID == p.MyStore && s.ID == TenantContext.StoreId))
                     .OrderBy(p => p.Product1)
                     .Skip((page - 1) * limit)
                     .Take(limit)
@@ -477,8 +471,7 @@ namespace SwiftEcom.Services
             {
                 var product = db.Products.FirstOrDefault(p => p.ID == id &&
                     db.Stores.Any(s =>
-                        s.ID == p.MyStore &&
-                        s.MyCompany == TenantContext.CompanyId));
+                        s.ID == p.MyStore && s.ID == TenantContext.StoreId));
                 if (product == null)
                     return new ApiResponse<ProductDTO> { Success = false, Message = "Product not found" };
 
@@ -500,7 +493,7 @@ namespace SwiftEcom.Services
                     && p.Status == "Active"
                     && p.Features != null
                     && p.Features != ""
-                     && db.Stores.Any(s => s.ID == p.MyStore && s.MyCompany == TenantContext.CompanyId))
+                     && db.Stores.Any(s => s.ID == p.MyStore && s.ID == TenantContext.StoreId))
                 .ToList()
                 .Select(p => MapProductToDTO(p))
                 .ToList();
@@ -528,7 +521,7 @@ namespace SwiftEcom.Services
                 .ToList();
 
                 var products = db.Products
-                    .Where(p => subcategoryIDs.Contains(p.Category) && p.ActiveStatus == "Active" && db.Stores.Any(s => s.ID == p.MyStore && s.MyCompany == TenantContext.CompanyId))
+                    .Where(p => subcategoryIDs.Contains(p.Category) && p.ActiveStatus == "Active" && db.Stores.Any(s => s.ID == p.MyStore && s.ID == TenantContext.StoreId))
                     .ToList()
                     .Select(p => MapProductToDTO(p))
                     .ToList();
@@ -551,7 +544,7 @@ namespace SwiftEcom.Services
                     return new ApiResponse<List<ProductDTO>> { Success = false, Message = "Subcategory not found" };
 
                 var products = db.Products
-                    .Where(p => p.Category == subcategoryId && p.ActiveStatus == "Active" && db.Stores.Any(s => s.ID == p.MyStore && s.MyCompany == TenantContext.CompanyId))
+                    .Where(p => p.Category == subcategoryId && p.ActiveStatus == "Active" && db.Stores.Any(s => s.ID == p.MyStore && s.ID == TenantContext.StoreId))
                     .ToList()
                     .Select(p => MapProductToDTO(p))
                     .ToList();
@@ -793,8 +786,7 @@ namespace SwiftEcom.Services
                 var productsQuery = db.Products
                     .Where(p => p.ActiveStatus == "Active"
                         && db.Stores.Any(s =>
-                            s.ID == p.MyStore &&
-                            s.MyCompany == TenantContext.CompanyId));
+                            s.ID == p.MyStore && s.ID == TenantContext.StoreId));
 
                 // Filter by search query
                 if (!string.IsNullOrEmpty(query))
@@ -929,8 +921,7 @@ namespace SwiftEcom.Services
 
                 var product = db.Products.FirstOrDefault(p => p.ID == productId &&
                 db.Stores.Any(s =>
-                    s.ID == p.MyStore &&
-                    s.MyCompany == TenantContext.CompanyId));
+                    s.ID == p.MyStore && s.ID == TenantContext.StoreId));
 
                 if (product == null)
                 {
@@ -1282,8 +1273,7 @@ namespace SwiftEcom.Services
                 {
                     var product = db.Products.FirstOrDefault(p => p.ID == item.ProductID &&
                             db.Stores.Any(s =>
-                                s.ID == p.MyStore &&
-                                s.MyCompany == TenantContext.CompanyId));
+                                s.ID == p.MyStore && s.ID == TenantContext.StoreId));
 
                     db.AccountInvoiceDetails.Add(new AccountInvoiceDetail
                     {
@@ -1361,7 +1351,7 @@ namespace SwiftEcom.Services
                               join c in db.Customers on i.MyCustomer equals c.CustomerID
                               join s in db.Stores on c.MyStore equals s.ID
                               where i.MyCustomer == customerID
-                                    && s.MyCompany == TenantContext.CompanyId
+                                     && s.ID == TenantContext.StoreId
                               orderby i.Date descending
                               select new OrderDTO
                               {
@@ -1402,7 +1392,7 @@ namespace SwiftEcom.Services
                                join s in db.Stores on c.MyStore equals s.ID
                                where i.ID == invoiceID
                                      && i.MyCustomer == customerID
-                                     && s.MyCompany == TenantContext.CompanyId
+                                      && s.ID == TenantContext.StoreId
                                select i)
               .FirstOrDefault();
 
@@ -1469,7 +1459,7 @@ namespace SwiftEcom.Services
                                join s in db.Stores on c.MyStore equals s.ID
                                where i.ID == invoiceID
                                      && i.MyCustomer == customerID
-                                     && s.MyCompany == TenantContext.CompanyId
+                                      && s.ID == TenantContext.StoreId
                                select i)
               .FirstOrDefault();
 

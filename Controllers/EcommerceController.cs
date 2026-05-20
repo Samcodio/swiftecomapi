@@ -28,6 +28,19 @@ namespace SwiftEcom.Controllers
         // AUTH
         // ========================
 
+        // GET /api/stores
+        [HttpGet]
+        [Route("api/stores")]
+        public IHttpActionResult GetStores()
+        {
+            SwiftEntities db = new SwiftEntities();
+            var stores = db.Stores
+                .Where(s => s.MyCompany == "019cce92-f61c-45b1")
+                .Select(s => new { s.ID, s.StoreName })
+                .ToList();
+            return Ok(stores);
+        }
+
         // POST /auth/signup
         [HttpPost]
         [Route("auth/signup")]
