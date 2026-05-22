@@ -417,5 +417,42 @@ namespace SwiftEcom.Controllers
             return Ok(result);
         }
 
+        public class ForgotPasswordRequest
+        {
+            public string Email { get; set; }
+        }
+
+        public class ResetPasswordRequest
+        {
+            public string Email { get; set; }
+            public string Token { get; set; }
+            public string NewPassword { get; set; }
+        }
+
+        // POST /auth/forgot-password
+        [HttpPost]
+        [Route("auth/forgot-password")]
+        public IHttpActionResult ForgotPassword([FromBody] ForgotPasswordRequest model)
+        {
+            var dto = new SwiftEcom.Services.ForgotPasswordDTO { Email = model.Email };
+            var result = _service.ForgotPassword(dto);
+            return Ok(result);
+        }
+
+        // POST /auth/reset-password
+        [HttpPost]
+        [Route("auth/reset-password")]
+        public IHttpActionResult ResetPassword([FromBody] ResetPasswordRequest model)
+        {
+            var dto = new SwiftEcom.Services.ResetPasswordDTO
+            {
+                Email = model.Email,
+                Token = model.Token,
+                NewPassword = model.NewPassword
+            };
+            var result = _service.ResetPassword(dto);
+            return Ok(result);
+        }
+
     }
 }
