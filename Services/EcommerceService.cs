@@ -217,6 +217,18 @@ namespace SwiftEcom.Services
         public decimal? Amount { get; set; }
     }
 
+    public class ForgotPasswordDTO
+    {
+        public string Email { get; set; }
+    }
+
+    public class ResetPasswordDTO
+    {
+        public string Email { get; set; }
+        public string Token { get; set; }
+        public string NewPassword { get; set; }
+    }
+
 
     public class EcommerceService
     {
@@ -1598,6 +1610,107 @@ namespace SwiftEcom.Services
                 Amount = x.Amount ?? 0,
                 ImageUrl = product?.SmallImage
             };
+        }
+
+        // ========================
+        // FORGOT / RESET PASSWORD
+        // ========================
+
+        public ApiResponse<string> ForgotPassword(ForgotPasswordDTO model)
+        {
+            try
+            {
+                var customer = db.Customers.FirstOrDefault(c => c.Email == model.Email &&
+                    db.Stores.Any(s => s.ID == c.MyStore && s.ID == TenantContext.StoreId));
+
+                // Return same message either way to prevent email enumeration
+                if (customer == null)
+                {
+                    return new ApiResponse<string> { Success = true, Message = "If the email exists, a reset link has been sent." };
+                }
+
+                // Generate raw token and hash it with BCrypt
+                string rawToken = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+                customer.ResetTokenHash = BCrypt.Net.BCrypt.HashPassword(rawToken);
+                customer.ResetTokenExpiry = DateTime.Now.AddHours(1);
+                db.SaveChanges();
+
+                // Build simple text email
+                string resetLink = $"https://ecomapi.swift.ng/reset-password?token={rawToken}&email={customer.Email}";
+                string emailBody = $"Click the link below to reset your password:\n\n{resetLink}\n\nThis link expires in 1 hour.\nIf you did not request this, please ignore this email.";
+
+                bool emailSent = SendResetEmail(customer.Email, "Password Reset Request", emailBody);
+
+                // Always return generic success (don't leak whether email exists)
+                return new ApiResponse<string> { Success = true, Message = "If the email exists, a reset link has been sent." };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<string> { Success = false, Message = ex.Message };
+            }
+        }
+
+        public ApiResponse<string> ResetPassword(ResetPasswordDTO model)
+        {
+            try
+            {
+                var customer = db.Customers.FirstOrDefault(c => c.Email == model.Email &&
+                    db.Stores.Any(s => s.ID == c.MyStore && s.ID == TenantContext.StoreId));
+
+                if (customer == null)
+                    return new ApiResponse<string> { Success = false, Message = "Invalid request" };
+
+                if (string.IsNullOrEmpty(customer.ResetTokenHash) || customer.ResetTokenExpiry == null || customer.ResetTokenExpiry < DateTime.Now)
+                    return new ApiResponse<string> { Success = false, Message = "Reset token has expired. Please request a new one." };
+
+                bool tokenValid = BCrypt.Net.BCrypt.Verify(model.Token, customer.ResetTokenHash);
+                if (!tokenValid)
+                    return new ApiResponse<string> { Success = false, Message = "Invalid or expired reset token" };
+
+                // Update password and clear token
+                customer.Password = HashPassword(model.NewPassword);
+                customer.ResetTokenHash = null;
+                customer.ResetTokenExpiry = null;
+                db.SaveChanges();
+
+                return new ApiResponse<string> { Success = true, Message = "Password reset successfully" };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<string> { Success = false, Message = ex.Message };
+            }
+        }
+
+        private bool SendResetEmail(string toEmail, string subject, string body)
+        {
+            try
+            {
+                // Pull SMTP config for the current store (Status == 1 assumed active)
+                var mailSetting = db.MailSettings.FirstOrDefault(m => m.StoreID == TenantContext.StoreId && m.Status == 1);
+                if (mailSetting == null) return false;
+
+                using (var client = new System.Net.Mail.SmtpClient(mailSetting.SMTPServer, mailSetting.SMTPPort ?? 587))
+                {
+                    client.EnableSsl = mailSetting.UseSSL ?? true;
+                    client.Credentials = new System.Net.NetworkCredential(mailSetting.EmailAddress, mailSetting.Password);
+
+                    var message = new System.Net.Mail.MailMessage
+                    {
+                        From = new System.Net.Mail.MailAddress(mailSetting.EmailAddress, mailSetting.DisplayName),
+                        Subject = subject,
+                        Body = body,
+                        IsBodyHtml = false
+                    };
+                    message.To.Add(toEmail);
+
+                    client.Send(message);
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

@@ -306,6 +306,27 @@
           <Property Name="ProviderName" Type="nvarchar" MaxLength="50" />
           <Property Name="Timed" Type="time" Precision="7" />
         </EntityType>
+        <EntityType Name="MailSetting">
+          <Key>
+            <PropertyRef Name="ID" />
+          </Key>
+          <Property Name="ID" Type="nvarchar" MaxLength="50" Nullable="false" />
+          <Property Name="StoreID" Type="nvarchar" MaxLength="50" />
+          <Property Name="EmailAddress" Type="nvarchar" MaxLength="255" />
+          <Property Name="Password" Type="nvarchar" MaxLength="255" />
+          <Property Name="IMAPServer" Type="nvarchar" MaxLength="255" />
+          <Property Name="IMAPPort" Type="int" />
+          <Property Name="SMTPServer" Type="nvarchar" MaxLength="255" />
+          <Property Name="SMTPPort" Type="int" />
+          <Property Name="UseSSL" Type="bit" />
+          <Property Name="LastCheckedDate" Type="datetime" />
+          <Property Name="DisplayName" Type="nvarchar" MaxLength="100" />
+          <Property Name="Status" Type="int" />
+          <Property Name="AIReply" Type="nvarchar" MaxLength="5" />
+          <Property Name="AIPrompt" Type="nvarchar(max)" />
+          <Property Name="StaffID" Type="nvarchar" MaxLength="50" />
+          <Property Name="AIResource" Type="nvarchar(max)" />
+        </EntityType>
         <EntityType Name="ProcurementCategory">
           <Key>
             <PropertyRef Name="ID" />
@@ -677,6 +698,20 @@
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <Association Name="FK_MailSetting_Store">
+          <End Role="Store" Type="Self.Store" Multiplicity="0..1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="MailSetting" Type="Self.MailSetting" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Store">
+              <PropertyRef Name="ID" />
+            </Principal>
+            <Dependent Role="MailSetting">
+              <PropertyRef Name="StoreID" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
         <Association Name="FK_ProcurementCategory_Store">
           <End Role="Store" Type="Self.Store" Multiplicity="0..1">
             <OnDelete Action="Cascade" />
@@ -818,6 +853,7 @@
           <EntitySet Name="Company" EntityType="Self.Company" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="Customer" EntityType="Self.Customer" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="CustomerPayment" EntityType="Self.CustomerPayment" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="MailSetting" EntityType="Self.MailSetting" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="ProcurementCategory" EntityType="Self.ProcurementCategory" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="ProcurementCategoryVendor" EntityType="Self.ProcurementCategoryVendor" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="ProductCategory" EntityType="Self.ProductCategory" Schema="dbo" store:Type="Tables" />
@@ -851,6 +887,10 @@
           <AssociationSet Name="FK_Customer_Store" Association="Self.FK_Customer_Store">
             <End Role="Store" EntitySet="Store" />
             <End Role="Customer" EntitySet="Customer" />
+          </AssociationSet>
+          <AssociationSet Name="FK_MailSetting_Store" Association="Self.FK_MailSetting_Store">
+            <End Role="Store" EntitySet="Store" />
+            <End Role="MailSetting" EntitySet="MailSetting" />
           </AssociationSet>
           <AssociationSet Name="FK_ProcurementCategory_Store" Association="Self.FK_ProcurementCategory_Store">
             <End Role="Store" EntitySet="Store" />
@@ -977,6 +1017,11 @@
           <AssociationSet Name="FK_Products_ProductCategory" Association="SwiftModel.FK_Products_ProductCategory">
             <End Role="ProductCategory" EntitySet="ProductCategories" />
             <End Role="Product" EntitySet="Products" />
+          </AssociationSet>
+          <EntitySet Name="MailSettings" EntityType="SwiftModel.MailSetting" />
+          <AssociationSet Name="FK_MailSetting_Store" Association="SwiftModel.FK_MailSetting_Store">
+            <End Role="Store" EntitySet="Stores" />
+            <End Role="MailSetting" EntitySet="MailSettings" />
           </AssociationSet>
         </EntityContainer>
         <EntityType Name="AccountInvoice">
@@ -1440,6 +1485,7 @@
           <NavigationProperty Name="ProcurementCategories" Relationship="SwiftModel.FK_ProcurementCategory_Store" FromRole="Store" ToRole="ProcurementCategory" />
           <NavigationProperty Name="Products" Relationship="SwiftModel.FK_Products_Store" FromRole="Store" ToRole="Product" />
           <NavigationProperty Name="Customers" Relationship="SwiftModel.FK_Customer_Store" FromRole="Store" ToRole="Customer" />
+          <NavigationProperty Name="MailSettings" Relationship="SwiftModel.FK_MailSetting_Store" FromRole="Store" ToRole="MailSetting" />
         </EntityType>
         <Association Name="FK_AccountInvoiceDetails_AccountInvoice">
           <End Type="SwiftModel.AccountInvoice" Role="AccountInvoice" Multiplicity="0..1">
@@ -1814,6 +1860,42 @@
             </Principal>
             <Dependent Role="Product">
               <PropertyRef Name="Category" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <EntityType Name="MailSetting">
+          <Key>
+            <PropertyRef Name="ID" />
+          </Key>
+          <Property Name="ID" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="StoreID" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="EmailAddress" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
+          <Property Name="Password" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
+          <Property Name="IMAPServer" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
+          <Property Name="IMAPPort" Type="Int32" />
+          <Property Name="SMTPServer" Type="String" MaxLength="255" FixedLength="false" Unicode="true" />
+          <Property Name="SMTPPort" Type="Int32" />
+          <Property Name="UseSSL" Type="Boolean" />
+          <Property Name="LastCheckedDate" Type="DateTime" Precision="3" />
+          <Property Name="DisplayName" Type="String" MaxLength="100" FixedLength="false" Unicode="true" />
+          <Property Name="Status" Type="Int32" />
+          <Property Name="AIReply" Type="String" MaxLength="5" FixedLength="false" Unicode="true" />
+          <Property Name="AIPrompt" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="StaffID" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="AIResource" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <NavigationProperty Name="Store" Relationship="SwiftModel.FK_MailSetting_Store" FromRole="MailSetting" ToRole="Store" />
+        </EntityType>
+        <Association Name="FK_MailSetting_Store">
+          <End Type="SwiftModel.Store" Role="Store" Multiplicity="0..1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Type="SwiftModel.MailSetting" Role="MailSetting" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Store">
+              <PropertyRef Name="ID" />
+            </Principal>
+            <Dependent Role="MailSetting">
+              <PropertyRef Name="StoreID" />
             </Dependent>
           </ReferentialConstraint>
         </Association>
@@ -2425,6 +2507,28 @@
                 <ScalarProperty Name="ForSale" ColumnName="ForSale" />
                 <ScalarProperty Name="Category" ColumnName="Category" />
                 <ScalarProperty Name="MyCompany" ColumnName="MyCompany" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="MailSettings">
+            <EntityTypeMapping TypeName="SwiftModel.MailSetting">
+              <MappingFragment StoreEntitySet="MailSetting">
+                <ScalarProperty Name="AIResource" ColumnName="AIResource" />
+                <ScalarProperty Name="StaffID" ColumnName="StaffID" />
+                <ScalarProperty Name="AIPrompt" ColumnName="AIPrompt" />
+                <ScalarProperty Name="AIReply" ColumnName="AIReply" />
+                <ScalarProperty Name="Status" ColumnName="Status" />
+                <ScalarProperty Name="DisplayName" ColumnName="DisplayName" />
+                <ScalarProperty Name="LastCheckedDate" ColumnName="LastCheckedDate" />
+                <ScalarProperty Name="UseSSL" ColumnName="UseSSL" />
+                <ScalarProperty Name="SMTPPort" ColumnName="SMTPPort" />
+                <ScalarProperty Name="SMTPServer" ColumnName="SMTPServer" />
+                <ScalarProperty Name="IMAPPort" ColumnName="IMAPPort" />
+                <ScalarProperty Name="IMAPServer" ColumnName="IMAPServer" />
+                <ScalarProperty Name="Password" ColumnName="Password" />
+                <ScalarProperty Name="EmailAddress" ColumnName="EmailAddress" />
+                <ScalarProperty Name="StoreID" ColumnName="StoreID" />
                 <ScalarProperty Name="ID" ColumnName="ID" />
               </MappingFragment>
             </EntityTypeMapping>

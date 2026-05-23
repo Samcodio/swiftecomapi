@@ -37,6 +37,8 @@
         <AssociationConnector Association="SwiftModel.FK_ProductCategory_Company" />
         <AssociationConnector Association="SwiftModel.FK_ProductCategory_ProductCategoryMaster" />
         <AssociationConnector Association="SwiftModel.FK_Products_ProductCategory" />
+        <EntityTypeShape EntityType="SwiftModel.MailSetting" Width="1.5" PointX="5.25" PointY="5.125" />
+        <AssociationConnector Association="SwiftModel.FK_MailSetting_Store" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

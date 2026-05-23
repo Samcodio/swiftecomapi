@@ -20,6 +20,7 @@ namespace SwiftEcom.Models
             this.ProcurementCategories = new HashSet<ProcurementCategory>();
             this.Products = new HashSet<Product>();
             this.Customers = new HashSet<Customer>();
+            this.MailSettings = new HashSet<MailSetting>();
         }
     
         public string ID { get; set; }
@@ -149,5 +150,7 @@ namespace SwiftEcom.Models
         public virtual ICollection<Product> Products { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<Customer> Customers { get; set; }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public virtual ICollection<MailSetting> MailSettings { get; set; }
     }
 }
