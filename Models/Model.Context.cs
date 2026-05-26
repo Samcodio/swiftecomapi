@@ -41,5 +41,6 @@ namespace SwiftEcom.Models
         public virtual DbSet<Customer> Customers { get; set; }
         public virtual DbSet<ProductCategoryMaster> ProductCategoryMasters { get; set; }
         public virtual DbSet<ProductCategory> ProductCategories { get; set; }
+        public virtual DbSet<MailSetting> MailSettings { get; set; }
     }
 }
