@@ -236,8 +236,19 @@ namespace SwiftEcom.Services
 
         public static class TenantContext
         {
-            public const string CompanyId = "019cce92-f61c-45b1";
             public const string StoreId = "1B9A70-3X05HPX2";
+            public static readonly string CompanyId;
+
+            static TenantContext()
+            {
+                using (var db = new SwiftEntities())
+                {
+                    CompanyId = db.Stores
+                        .Where(s => s.ID == StoreId)
+                        .Select(s => s.MyCompany)
+                        .FirstOrDefault();
+                }
+            }
         }
 
 
