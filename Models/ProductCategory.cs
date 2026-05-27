@@ -14,12 +14,6 @@ namespace SwiftEcom.Models
     
     public partial class ProductCategory
     {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
-        public ProductCategory()
-        {
-            this.Products = new HashSet<Product>();
-        }
-    
         public string ID { get; set; }
         public string MyCompany { get; set; }
         public string Category { get; set; }
@@ -27,9 +21,6 @@ namespace SwiftEcom.Models
         public string MasterID { get; set; }
         public Nullable<System.TimeSpan> Timed { get; set; }
     
-        public virtual Company Company { get; set; }
         public virtual ProductCategoryMaster ProductCategoryMaster { get; set; }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<Product> Products { get; set; }
     }
 }

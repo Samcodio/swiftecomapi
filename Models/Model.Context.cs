@@ -29,18 +29,16 @@ namespace SwiftEcom.Models
         public virtual DbSet<AccountInvoiceDetail> AccountInvoiceDetails { get; set; }
         public virtual DbSet<Cart> Carts { get; set; }
         public virtual DbSet<Company> Companies { get; set; }
+        public virtual DbSet<Customer> Customers { get; set; }
         public virtual DbSet<CustomerPayment> CustomerPayments { get; set; }
-        public virtual DbSet<ProcurementCategory> ProcurementCategories { get; set; }
-        public virtual DbSet<ProcurementCategoryVendor> ProcurementCategoryVendors { get; set; }
+        public virtual DbSet<MailSetting> MailSettings { get; set; }
+        public virtual DbSet<ProductCategory> ProductCategories { get; set; }
+        public virtual DbSet<ProductCategoryMaster> ProductCategoryMasters { get; set; }
         public virtual DbSet<ProductImage> ProductImages { get; set; }
         public virtual DbSet<Product> Products { get; set; }
         public virtual DbSet<ProductVariant> ProductVariants { get; set; }
         public virtual DbSet<ShippingInfo> ShippingInfoes { get; set; }
         public virtual DbSet<ShoppingCartDetail> ShoppingCartDetails { get; set; }
         public virtual DbSet<Store> Stores { get; set; }
-        public virtual DbSet<Customer> Customers { get; set; }
-        public virtual DbSet<ProductCategoryMaster> ProductCategoryMasters { get; set; }
-        public virtual DbSet<ProductCategory> ProductCategories { get; set; }
-        public virtual DbSet<MailSetting> MailSettings { get; set; }
     }
 }

@@ -32,7 +32,6 @@ namespace SwiftEcom.Models
         public string SerialNo { get; set; }
         public string Location { get; set; }
         public string EnteredBy { get; set; }
-        public string ImageUrl { get; set; }
     
         public virtual Product Product { get; set; }
     }

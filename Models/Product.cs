@@ -79,8 +79,8 @@ namespace SwiftEcom.Models
         public string PriceIncludesVAT { get; set; }
         public Nullable<decimal> PercentOff { get; set; }
         public Nullable<decimal> Tax { get; set; }
-        public string Recurring { get; set; }
         public int SerialNumber { get; set; }
+        public string Recurring { get; set; }
         public Nullable<decimal> ProductionDefaultQty { get; set; }
         public Nullable<decimal> ProductionWeightConversion { get; set; }
     
@@ -88,11 +88,9 @@ namespace SwiftEcom.Models
         public virtual ICollection<AccountInvoiceDetail> AccountInvoiceDetails { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<ProductImage> ProductImages { get; set; }
-        public virtual Store Store { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<ProductVariant> ProductVariants { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<ShoppingCartDetail> ShoppingCartDetails { get; set; }
-        public virtual ProductCategory ProductCategory { get; set; }
     }
 }

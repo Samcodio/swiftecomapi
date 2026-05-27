@@ -74,6 +74,10 @@ namespace SwiftEcom.Models
         public int SerialNumber { get; set; }
         public string DirectCode { get; set; }
         public string PartnerPlan { get; set; }
+        public string PayStackBankCode { get; set; }
+        public string FlutterwaveBankCode { get; set; }
+        public string PayStackAccountNumber { get; set; }
+        public string FlutterwaveAccountNumber { get; set; }
         public string BVN { get; set; }
         public string NIN { get; set; }
         public string FamilyMember1Name { get; set; }
@@ -119,6 +123,8 @@ namespace SwiftEcom.Models
         public Nullable<System.Guid> SessionToken { get; set; }
         public Nullable<System.DateTime> TrialStartDate { get; set; }
         public Nullable<bool> IsTrialExpired { get; set; }
+        public string ResetTokenHash { get; set; }
+        public Nullable<System.DateTime> ResetTokenExpiry { get; set; }
         public string OfficialEmail { get; set; }
         public string OfficeAddress { get; set; }
         public Nullable<decimal> MonthlySalary { get; set; }
@@ -135,8 +141,6 @@ namespace SwiftEcom.Models
         public string UtilityBillId { get; set; }
         public string EmployLetterId { get; set; }
         public string NextOfKinPhone2 { get; set; }
-        public string ResetTokenHash { get; set; }
-        public Nullable<System.DateTime> ResetTokenExpiry { get; set; }
         public Nullable<int> KYCLevelId { get; set; }
         public string KYCStatus { get; set; }
         public Nullable<bool> IsKYCVerified { get; set; }

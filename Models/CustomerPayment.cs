@@ -32,7 +32,7 @@ namespace SwiftEcom.Models
         public Nullable<decimal> ExchangeRate { get; set; }
         public Nullable<int> Post { get; set; }
         public Nullable<int> PaidStatus { get; set; }
-        public Nullable<int> TransactionId { get; set; }
+        public string TransactionId { get; set; }
         public string TransactionReference { get; set; }
         public string ProviderName { get; set; }
         public Nullable<System.TimeSpan> Timed { get; set; }

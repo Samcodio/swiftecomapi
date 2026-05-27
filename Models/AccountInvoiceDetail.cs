@@ -32,8 +32,9 @@ namespace SwiftEcom.Models
         public int myserial { get; set; }
         public string WarehouseID { get; set; }
         public Nullable<int> Promo { get; set; }
-        public Nullable<decimal> DiscountID { get; set; }
+        public string DiscountID { get; set; }
         public Nullable<decimal> ShadowQty { get; set; }
+        public Nullable<decimal> VariedQty { get; set; }
         public Nullable<decimal> VAT { get; set; }
     
         public virtual AccountInvoice AccountInvoice { get; set; }

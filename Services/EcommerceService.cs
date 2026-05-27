@@ -224,8 +224,25 @@ namespace SwiftEcom.Services
 
         public static class TenantContext
         {
-            public const string CompanyId = "019cce92-f61c-45b1";
-            public const string StoreId = "1B9A70-3X05HPX2";
+            //public const string CompanyId = "019cce92-f61c-45b1";
+            public const string StoreId = "maitangarantextiles2";
+
+            // Static property that resolves the company dynamically
+            public static string CompanyId
+            {
+                get
+                {
+                    using (var db = new SwiftEntities())
+                    {
+                        return db.Stores
+                            .Where(s => s.ID == StoreId)   // use StoreId column
+                            .Select(s => s.MyCompany)
+                            .FirstOrDefault();
+                    }
+                }
+            }
+
+
         }
 
 
@@ -276,8 +293,10 @@ namespace SwiftEcom.Services
         {
             try
             {
-                // Check if username or email already exists
-                var exists = db.Customers.Any(c => c.Username == model.Username || c.Email == model.Email);
+                // Check at company level (all stores under same company)
+                var exists = db.Customers.Any(c =>
+                    db.Stores.Any(s => s.ID == c.MyStore && s.MyCompany == TenantContext.CompanyId) &&
+                    (c.Username == model.Username || c.Email == model.Email));
                 if (exists)
                     return new ApiResponse<CustomerDTO> { Success = false, Message = "Username or Email already exists" };
 
@@ -446,8 +465,16 @@ namespace SwiftEcom.Services
         {
             try
             {
+                //var products = db.Products
+                //.Where(p => db.Stores.Any(s => s.ID == p.MyStore && s.ID == TenantContext.StoreId))
+                //.OrderBy(p => p.Product1)
+                //.Skip((page - 1) * limit)
+                //.Take(limit)
+                //.ToList()
+                //.Select(p => MapProductToDTO(p))
+                //.ToList();
                 var products = db.Products
-                    .Where(p => p.ActiveStatus == "Active" && p.Status == "Active" &&
+                    .Where(p => p.ActiveStatus == "Active" && p.Status != "Private" &&
                     db.Stores.Any(s =>
                         s.ID == p.MyStore && s.ID == TenantContext.StoreId))
                     .OrderBy(p => p.Product1)
@@ -461,7 +488,13 @@ namespace SwiftEcom.Services
             }
             catch (Exception ex)
             {
-                return new ApiResponse<List<ProductDTO>> { Success = false, Message = ex.Message };
+                var message = ex.Message;
+                if (ex.InnerException != null)
+                    message += " | " + ex.InnerException.Message;
+                if (ex.InnerException?.InnerException != null)
+                    message += " | " + ex.InnerException.InnerException.Message;
+
+                return new ApiResponse<List<ProductDTO>> { Success = false, Message = message };
             }
         }
 
@@ -490,7 +523,8 @@ namespace SwiftEcom.Services
                 // Featured = active products with an online rate and a discount/percent off
                 var products = db.Products
                 .Where(p => p.ActiveStatus == "Active"
-                    && p.Status == "Active"
+                    && p.Status != "Private"
+                    && p.ActiveStatus == "Active"
                     && p.Features != null
                     && p.Features != ""
                      && db.Stores.Any(s => s.ID == p.MyStore && s.ID == TenantContext.StoreId))
@@ -516,12 +550,12 @@ namespace SwiftEcom.Services
                     return new ApiResponse<List<ProductDTO>> { Success = false, Message = "Category not found" };
 
                 var subcategoryIDs = db.ProductCategories
-                .Where(c => c.MasterID == categoryId && c.Company.ID == TenantContext.CompanyId)
+                .Where(c => c.MasterID == categoryId && c.MyCompany == TenantContext.CompanyId)
                 .Select(c => c.ID)
                 .ToList();
 
                 var products = db.Products
-                    .Where(p => subcategoryIDs.Contains(p.Category) && p.ActiveStatus == "Active" && db.Stores.Any(s => s.ID == p.MyStore && s.ID == TenantContext.StoreId))
+                    .Where(p => subcategoryIDs.Contains(p.Category) && p.Status != "Private" && p.ActiveStatus == "Active" && db.Stores.Any(s => s.ID == p.MyStore && s.ID == TenantContext.StoreId))
                     .ToList()
                     .Select(p => MapProductToDTO(p))
                     .ToList();
@@ -544,7 +578,7 @@ namespace SwiftEcom.Services
                     return new ApiResponse<List<ProductDTO>> { Success = false, Message = "Subcategory not found" };
 
                 var products = db.Products
-                    .Where(p => p.Category == subcategoryId && p.ActiveStatus == "Active" && db.Stores.Any(s => s.ID == p.MyStore && s.ID == TenantContext.StoreId))
+                    .Where(p => p.Category == subcategoryId && p.Status != "Private" && p.ActiveStatus == "Active" && db.Stores.Any(s => s.ID == p.MyStore && s.ID == TenantContext.StoreId))
                     .ToList()
                     .Select(p => MapProductToDTO(p))
                     .ToList();
@@ -562,7 +596,7 @@ namespace SwiftEcom.Services
             try
             {
                 var variants = db.ProductVariants
-                    .Where(v => v.ProductID == productId && v.Status == "Active")
+                    .Where(v => v.ProductID == productId)
                     .ToList()
                     .Select(v => MapVariantToDTO(v))
                     .ToList();

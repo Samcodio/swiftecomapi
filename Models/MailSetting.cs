@@ -26,8 +26,8 @@ namespace SwiftEcom.Models
         public Nullable<System.DateTime> LastCheckedDate { get; set; }
         public string DisplayName { get; set; }
         public Nullable<int> Status { get; set; }
-        public string AIReply { get; set; }
         public string AIPrompt { get; set; }
+        public string AIReply { get; set; }
         public string StaffID { get; set; }
         public string AIResource { get; set; }
     

@@ -19,7 +19,6 @@ namespace SwiftEcom.Models
         {
             this.Carts = new HashSet<Cart>();
             this.Stores = new HashSet<Store>();
-            this.ProductCategories = new HashSet<ProductCategory>();
         }
     
         public string ID { get; set; }
@@ -72,7 +71,5 @@ namespace SwiftEcom.Models
         public virtual ICollection<Cart> Carts { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<Store> Stores { get; set; }
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<ProductCategory> ProductCategories { get; set; }
     }
 }

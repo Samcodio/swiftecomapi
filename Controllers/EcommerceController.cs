@@ -41,6 +41,23 @@ namespace SwiftEcom.Controllers
             return Ok(stores);
         }
 
+        // GET /api/stores/search?name=abc
+        [HttpGet]
+        [Route("api/stores/search")]
+        public IHttpActionResult SearchStores(string name)
+        {
+            using (SwiftEntities db = new SwiftEntities())
+            {
+                var stores = db.Stores
+                    .Where(s => s.StoreName.Contains(name))
+                    .Select(s => new { s.ID, s.StoreName })
+                    .ToList();
+
+                return Ok(stores);
+            }
+        }
+
+
         // POST /auth/signup
         [HttpPost]
         [Route("auth/signup")]
@@ -110,6 +127,7 @@ namespace SwiftEcom.Controllers
         // GET /products
         [HttpGet]
         [Route("products")]
+        [Authorize]
         public IHttpActionResult GetAllProducts(int page = 1, int limit = 20)
         {
             var result = _service.GetAllProducts(page, limit);
@@ -119,6 +137,7 @@ namespace SwiftEcom.Controllers
         // GET /products/{id}
         [HttpGet]
         [Route("products/{id}")]
+        [Authorize]
         public IHttpActionResult GetProductByID(string id)
         {
             var result = _service.GetProductByID(id);
@@ -128,6 +147,7 @@ namespace SwiftEcom.Controllers
         // GET /products/featured
         [HttpGet]
         [Route("products/featured")]
+        [Authorize]
         public IHttpActionResult GetFeaturedProducts()
         {
             var result = _service.GetFeaturedProducts();
@@ -137,6 +157,7 @@ namespace SwiftEcom.Controllers
         // GET /products/category/{categoryId}
         [HttpGet]
         [Route("products/category/{categoryId}")]
+        [Authorize]
         public IHttpActionResult GetProductsByCategory(string categoryId)
         {
             var result = _service.GetProductsByCategory(categoryId);
@@ -146,6 +167,7 @@ namespace SwiftEcom.Controllers
         // GET /products/subcategory/{subcategoryId}
         [HttpGet]
         [Route("products/subcategory/{subcategoryId}")]
+        [Authorize]
         public IHttpActionResult GetProductsBySubcategory(string subcategoryId)
         {
             var result = _service.GetProductsBySubcategory(subcategoryId);
@@ -155,6 +177,7 @@ namespace SwiftEcom.Controllers
         // GET /products/{id}/variants
         [HttpGet]
         [Route("products/{id}/variants")]
+        [Authorize]
         public IHttpActionResult GetProductVariants(string id)
         {
             var result = _service.GetProductVariants(id);
@@ -164,6 +187,7 @@ namespace SwiftEcom.Controllers
         // GET /products/{id}/variants/{variantId}
         [HttpGet]
         [Route("products/{id}/variants/{variantId}")]
+        [Authorize]
         public IHttpActionResult GetVariantByID(string id, string variantId)
         {
             var result = _service.GetVariantByID(id, variantId);
@@ -172,6 +196,7 @@ namespace SwiftEcom.Controllers
 
         [HttpGet]
         [Route("products/{id}/images")]
+        [Authorize]
         public IHttpActionResult GetImagesByProduct(string id)
         {
             var result = _service.GetImagesByProduct(id);
@@ -180,6 +205,7 @@ namespace SwiftEcom.Controllers
 
         [HttpGet]
         [Route("products/{id}/variants/{variantId}/images")]
+        [Authorize]
         public IHttpActionResult GetImagesByVariant(string id, string variantId)
         {
             var result = _service.GetImagesByVariant(variantId);
@@ -194,6 +220,7 @@ namespace SwiftEcom.Controllers
         // GET /categories
         [HttpGet]
         [Route("categories")]
+        [Authorize]
         public IHttpActionResult GetAllCategories()
         {
             var result = _service.GetAllCategories();
@@ -203,6 +230,7 @@ namespace SwiftEcom.Controllers
         // GET /categories/{id}
         [HttpGet]
         [Route("categories/{id}")]
+        [Authorize]
         public IHttpActionResult GetCategoryByID(string id)
         {
             var result = _service.GetCategoryByID(id);
@@ -217,6 +245,7 @@ namespace SwiftEcom.Controllers
         // GET /subcategories
         [HttpGet]
         [Route("subcategories")]
+        [Authorize]
         public IHttpActionResult GetAllSubcategories()
         {
             var result = _service.GetAllSubcategories();
@@ -226,6 +255,7 @@ namespace SwiftEcom.Controllers
         // GET /subcategories/{id}
         [HttpGet]
         [Route("subcategories/{id}")]
+        [Authorize]
         public IHttpActionResult GetSubcategoryByID(string id)
         {
             var result = _service.GetSubcategoryByID(id);
@@ -235,6 +265,7 @@ namespace SwiftEcom.Controllers
         // GET /subcategories/category/{categoryId}
         [HttpGet]
         [Route("subcategories/category/{categoryId}")]
+        [Authorize]
         public IHttpActionResult GetSubcategoriesByCategory(string categoryId)
         {
             var result = _service.GetSubcategoriesByCategory(categoryId);
@@ -249,6 +280,7 @@ namespace SwiftEcom.Controllers
         // GET /search?query=
         [HttpGet]
         [Route("search")]
+        [Authorize]
         public IHttpActionResult Search(string query = "", string category = "", decimal minPrice = 0, decimal maxPrice = 0)
         {
             var result = _service.Search(query, category, minPrice, maxPrice);

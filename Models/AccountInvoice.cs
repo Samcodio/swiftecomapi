@@ -62,8 +62,8 @@ namespace SwiftEcom.Models
         public string FIRSIRNStatus { get; set; }
         public Nullable<System.DateTime> FIRSIRNGeneratedDate { get; set; }
     
+        public virtual Customer Customer { get; set; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public virtual ICollection<AccountInvoiceDetail> AccountInvoiceDetails { get; set; }
-        public virtual Customer Customer { get; set; }
     }
 }
