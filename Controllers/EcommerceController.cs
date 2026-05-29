@@ -34,10 +34,7 @@ namespace SwiftEcom.Controllers
         public IHttpActionResult GetStores()
         {
             SwiftEntities db = new SwiftEntities();
-            var stores = db.Stores
-                .Where(s => s.MyCompany == "019cce92-f61c-45b1")
-                .Select(s => new { s.ID, s.StoreName })
-                .ToList();
+            var stores = db.Stores.Select(s => new { s.ID, s.StoreName }).ToList();
             return Ok(stores);
         }
 
@@ -127,7 +124,6 @@ namespace SwiftEcom.Controllers
         // GET /products
         [HttpGet]
         [Route("products")]
-        [Authorize]
         public IHttpActionResult GetAllProducts(int page = 1, int limit = 20)
         {
             var result = _service.GetAllProducts(page, limit);
@@ -137,7 +133,6 @@ namespace SwiftEcom.Controllers
         // GET /products/{id}
         [HttpGet]
         [Route("products/{id}")]
-        [Authorize]
         public IHttpActionResult GetProductByID(string id)
         {
             var result = _service.GetProductByID(id);
@@ -147,7 +142,6 @@ namespace SwiftEcom.Controllers
         // GET /products/featured
         [HttpGet]
         [Route("products/featured")]
-        [Authorize]
         public IHttpActionResult GetFeaturedProducts()
         {
             var result = _service.GetFeaturedProducts();
@@ -157,7 +151,6 @@ namespace SwiftEcom.Controllers
         // GET /products/category/{categoryId}
         [HttpGet]
         [Route("products/category/{categoryId}")]
-        [Authorize]
         public IHttpActionResult GetProductsByCategory(string categoryId)
         {
             var result = _service.GetProductsByCategory(categoryId);
@@ -167,7 +160,6 @@ namespace SwiftEcom.Controllers
         // GET /products/subcategory/{subcategoryId}
         [HttpGet]
         [Route("products/subcategory/{subcategoryId}")]
-        [Authorize]
         public IHttpActionResult GetProductsBySubcategory(string subcategoryId)
         {
             var result = _service.GetProductsBySubcategory(subcategoryId);
@@ -177,7 +169,6 @@ namespace SwiftEcom.Controllers
         // GET /products/{id}/variants
         [HttpGet]
         [Route("products/{id}/variants")]
-        [Authorize]
         public IHttpActionResult GetProductVariants(string id)
         {
             var result = _service.GetProductVariants(id);
@@ -187,7 +178,6 @@ namespace SwiftEcom.Controllers
         // GET /products/{id}/variants/{variantId}
         [HttpGet]
         [Route("products/{id}/variants/{variantId}")]
-        [Authorize]
         public IHttpActionResult GetVariantByID(string id, string variantId)
         {
             var result = _service.GetVariantByID(id, variantId);
@@ -196,7 +186,6 @@ namespace SwiftEcom.Controllers
 
         [HttpGet]
         [Route("products/{id}/images")]
-        [Authorize]
         public IHttpActionResult GetImagesByProduct(string id)
         {
             var result = _service.GetImagesByProduct(id);
@@ -205,7 +194,6 @@ namespace SwiftEcom.Controllers
 
         [HttpGet]
         [Route("products/{id}/variants/{variantId}/images")]
-        [Authorize]
         public IHttpActionResult GetImagesByVariant(string id, string variantId)
         {
             var result = _service.GetImagesByVariant(variantId);
@@ -220,7 +208,6 @@ namespace SwiftEcom.Controllers
         // GET /categories
         [HttpGet]
         [Route("categories")]
-        [Authorize]
         public IHttpActionResult GetAllCategories()
         {
             var result = _service.GetAllCategories();
@@ -230,7 +217,6 @@ namespace SwiftEcom.Controllers
         // GET /categories/{id}
         [HttpGet]
         [Route("categories/{id}")]
-        [Authorize]
         public IHttpActionResult GetCategoryByID(string id)
         {
             var result = _service.GetCategoryByID(id);
@@ -245,7 +231,6 @@ namespace SwiftEcom.Controllers
         // GET /subcategories
         [HttpGet]
         [Route("subcategories")]
-        [Authorize]
         public IHttpActionResult GetAllSubcategories()
         {
             var result = _service.GetAllSubcategories();
@@ -255,7 +240,6 @@ namespace SwiftEcom.Controllers
         // GET /subcategories/{id}
         [HttpGet]
         [Route("subcategories/{id}")]
-        [Authorize]
         public IHttpActionResult GetSubcategoryByID(string id)
         {
             var result = _service.GetSubcategoryByID(id);
@@ -265,7 +249,6 @@ namespace SwiftEcom.Controllers
         // GET /subcategories/category/{categoryId}
         [HttpGet]
         [Route("subcategories/category/{categoryId}")]
-        [Authorize]
         public IHttpActionResult GetSubcategoriesByCategory(string categoryId)
         {
             var result = _service.GetSubcategoriesByCategory(categoryId);
@@ -449,5 +432,72 @@ namespace SwiftEcom.Controllers
             return Ok(result);
         }
 
+
+        // ========================
+        // PAYMENT (PAYSTACK)
+        // ========================
+
+        // POST /payment/initialize
+        // Body: { "InvoiceID": "...", "SuccessUrl": "https://...", "FailureUrl": "https://..." }
+        // Returns: AuthorizationUrl to redirect the user to Paystack
+        [HttpPost]
+        [Route("payment/initialize")]
+        [Authorize]
+        public IHttpActionResult InitializePayment([FromBody] PaymentInitializeRequestDTO model)
+        {
+            var customerID = GetCustomerId();
+            var result = _service.InitializePayment(
+                customerID, model.InvoiceID, model.SuccessUrl, model.FailureUrl);
+            return Ok(result);
+        }
+
+        // GET /payment/verify?reference=xxx&successUrl=...&failureUrl=...
+        // Called by Paystack redirect after user completes payment.
+        // If successUrl/failureUrl are provided, redirects there; otherwise returns JSON.
+        [HttpGet]
+        [Route("payment/verify")]
+        public IHttpActionResult VerifyPayment(
+            string reference, string successUrl = "", string failureUrl = "")
+        {
+            var result = _service.VerifyPayment(reference);
+
+            // If frontend provided redirect URLs, use them
+            if (result.Success && !string.IsNullOrEmpty(successUrl))
+                return Redirect(successUrl);
+
+            if (!result.Success && !string.IsNullOrEmpty(failureUrl))
+                return Redirect(failureUrl);
+
+            // Fallback to JSON response
+            return Ok(result);
+        }
+
+        // POST /payment/webhook
+        // Paystack calls this to notify of payment events.
+        // Must return HTTP 200 quickly — Paystack retries on non-200.
+        // No [Authorize] — Paystack has no JWT; verified via HMAC-SHA512 signature instead.
+        [HttpPost]
+        [Route("payment/webhook")]
+        public async System.Threading.Tasks.Task<IHttpActionResult> PaystackWebhook()
+        {
+            // Read raw body — needed for signature verification (must not deserialize first)
+            string rawBody = await Request.Content.ReadAsStringAsync();
+
+            // Paystack sends signature in this header
+            string signature = "";
+            if (Request.Headers.TryGetValues("x-paystack-signature", out var values))
+                signature = values.FirstOrDefault() ?? "";
+
+            var result = _service.HandleWebhook(rawBody, signature);
+
+            // Always return 200 — even on signature failure Paystack shouldn't keep retrying
+            // (a retry loop on a bad signature would never resolve)
+            return Ok(result);
+        }
+
+
     }
 }
+
+
+

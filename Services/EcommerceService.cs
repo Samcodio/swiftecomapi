@@ -217,6 +217,36 @@ namespace SwiftEcom.Services
         public decimal? Amount { get; set; }
     }
 
+    // ============================================================
+    // PAYSTACK
+    // ============================================================
+
+    public class PaymentInitializeRequestDTO
+    {
+        public string InvoiceID { get; set; }
+        public string SuccessUrl { get; set; }  // optional — frontend redirect on success
+        public string FailureUrl { get; set; }  // optional — frontend redirect on failure
+    }
+
+    public class PaymentInitializeResponseDTO
+    {
+        public string AuthorizationUrl { get; set; }
+        public string AccessCode { get; set; }
+        public string Reference { get; set; }
+        public decimal InvoiceTotal { get; set; }   // original invoice amount (pre-charge)
+        public decimal PaystackCharge { get; set; } // computed charge passed to customer
+        public decimal AmountCharged { get; set; }  // total sent to Paystack (kobo-converted)
+    }
+
+    public class PaystackVerifyResponseDTO
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; }
+        public string InvoiceID { get; set; }
+        public decimal AmountPaid { get; set; }
+    }
+
+
 
     public class EcommerceService
     {
@@ -909,10 +939,16 @@ namespace SwiftEcom.Services
             }
             catch (Exception ex)
             {
+
+                var message = ex.Message;
+                if (ex.InnerException != null)
+                    message += " | " + ex.InnerException.Message;
+                if (ex.InnerException?.InnerException != null)
+                    message += " | " + ex.InnerException.InnerException.Message;
                 return new ApiResponse<CartDTO>
                 {
                     Success = false,
-                    Message = ex.Message
+                    Message = message
                 };
             }
         }
@@ -1529,6 +1565,393 @@ namespace SwiftEcom.Services
                 return new ApiResponse<string> { Success = false, Message = ex.Message };
             }
         }
+
+
+        // ========================
+        // PAYSTACK PAYMENT
+        // ========================
+
+        // Paystack secret key — set in Web.config as <add key="PaystackSecretKey" value="sk_test_..." />
+        private string PaystackSecretKey =>
+            System.Configuration.ConfigurationManager.AppSettings["PaystackSecretKey"];
+
+        // Your API base URL — set in Web.config as <add key="ApiBaseUrl" value="https://yourapi.com" />
+        private string ApiBaseUrl
+        {
+            get
+            {
+                var request = System.Web.HttpContext.Current?.Request;
+                if (request == null) return "";
+                return $"{request.Url.Scheme}://{request.Url.Authority}";
+            }
+        }
+
+        /// <summary>
+        /// Computes the Paystack charge to pass on to the customer.
+        /// Rules: 1.5% + ₦100 flat fee, capped at ₦2,000. Fee waived entirely under ₦2,500.
+        /// Formula used: chargedAmount = (invoiceTotal + 100) / (1 - 0.015)  when total >= 2500
+        /// This ensures that after Paystack deducts its fee, the merchant receives exactly invoiceTotal.
+        /// </summary>
+        private decimal ComputePaystackCharge(decimal invoiceTotal)
+        {
+            if (invoiceTotal < 2500m)
+                return 0m; // fee waived under ₦2,500
+
+            // Work out the gross amount so that net (after Paystack deduction) == invoiceTotal
+            // Paystack deducts: 1.5% of gross + ₦100
+            // invoiceTotal = gross - (0.015 * gross + 100)
+            // invoiceTotal = gross * 0.985 - 100
+            // gross = (invoiceTotal + 100) / 0.985
+            decimal gross = (invoiceTotal + 100m) / 0.985m;
+            decimal charge = gross - invoiceTotal;
+
+            // Cap charge at ₦2,000
+            if (charge > 2000m) charge = 2000m;
+
+            return Math.Round(charge, 2);
+        }
+
+        public ApiResponse<PaymentInitializeResponseDTO> InitializePayment(
+            string customerID, string invoiceID, string successUrl, string failureUrl)
+        {
+            try
+            {
+                // 1. Load and validate invoice — must belong to this customer and this store
+                var invoice = (from i in db.AccountInvoices
+                               join c in db.Customers on i.MyCustomer equals c.CustomerID
+                               join s in db.Stores on c.MyStore equals s.ID
+                               where i.ID == invoiceID
+                                     && i.MyCustomer == customerID
+                                     && s.ID == TenantContext.StoreId
+                               select i).FirstOrDefault();
+
+                if (invoice == null)
+                    return new ApiResponse<PaymentInitializeResponseDTO>
+                    { Success = false, Message = "Invoice not found" };
+
+                if (invoice.Paid == 1)
+                    return new ApiResponse<PaymentInitializeResponseDTO>
+                    { Success = false, Message = "Invoice has already been paid" };
+
+                if (invoice.Status == 0)
+                    return new ApiResponse<PaymentInitializeResponseDTO>
+                    { Success = false, Message = "Cannot pay a cancelled order" };
+
+                // 2. Get customer email for Paystack
+                var customer = db.Customers.FirstOrDefault(c => c.CustomerID == customerID);
+                if (customer == null)
+                    return new ApiResponse<PaymentInitializeResponseDTO>
+                    { Success = false, Message = "Customer not found" };
+
+                // 3. Compute amounts
+                decimal invoiceTotal = invoice.Bill ?? 0m;
+                decimal charge = ComputePaystackCharge(invoiceTotal);
+                decimal amountToCharge = invoiceTotal + charge;
+
+                // Paystack expects amount in kobo (multiply by 100)
+                long amountInKobo = (long)(amountToCharge * 100);
+
+                // 4. Build Paystack callback_url — embed successUrl and failureUrl as query params
+                //    so the verify endpoint can redirect correctly after Paystack returns
+                string callbackUrl = $"{ApiBaseUrl}/payment/verify?reference={{REFERENCE}}";
+
+                // Encode the frontend redirect URLs into the callback so they survive the round-trip
+                string encodedSuccess = string.IsNullOrEmpty(successUrl)
+                    ? ""
+                    : Uri.EscapeDataString(successUrl);
+                string encodedFailure = string.IsNullOrEmpty(failureUrl)
+                    ? ""
+                    : Uri.EscapeDataString(failureUrl);
+
+                callbackUrl = $"{ApiBaseUrl}/payment/verify" +
+                              $"?successUrl={encodedSuccess}&failureUrl={encodedFailure}";
+
+                // 5. Call Paystack Initialize endpoint
+                var requestBody = new
+                {
+                    email = customer.Email,
+                    amount = amountInKobo,
+                    currency = "NGN",
+                    reference = Guid.NewGuid().ToString("N"), // unique reference
+                    callback_url = callbackUrl,
+                    metadata = new
+                    {
+                        invoice_id = invoiceID,
+                        customer_id = customerID,
+                        invoice_total = invoiceTotal,
+                        paystack_charge = charge
+                    }
+                };
+
+                string jsonBody = Newtonsoft.Json.JsonConvert.SerializeObject(requestBody);
+
+                string paystackResponse;
+                using (var client = new System.Net.Http.HttpClient())
+                {
+                    client.DefaultRequestHeaders.Authorization =
+                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", PaystackSecretKey);
+                    client.DefaultRequestHeaders.Accept.Add(
+                        new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+
+                    var content = new System.Net.Http.StringContent(
+                        jsonBody, System.Text.Encoding.UTF8, "application/json");
+
+                    var response = client.PostAsync(
+                        "https://api.paystack.co/transaction/initialize", content).Result;
+
+                    paystackResponse = response.Content.ReadAsStringAsync().Result;
+
+                    if (!response.IsSuccessStatusCode)
+                        return new ApiResponse<PaymentInitializeResponseDTO>
+                        { Success = false, Message = $"Paystack error: {paystackResponse}" };
+                }
+
+                // 6. Parse Paystack response
+                dynamic parsed = Newtonsoft.Json.JsonConvert.DeserializeObject(paystackResponse);
+
+                if (parsed.status != true)
+                    return new ApiResponse<PaymentInitializeResponseDTO>
+                    { Success = false, Message = (string)parsed.message };
+
+                return new ApiResponse<PaymentInitializeResponseDTO>
+                {
+                    Success = true,
+                    Message = "Payment initialized",
+                    Data = new PaymentInitializeResponseDTO
+                    {
+                        AuthorizationUrl = (string)parsed.data.authorization_url,
+                        AccessCode = (string)parsed.data.access_code,
+                        Reference = (string)parsed.data.reference,
+                        InvoiceTotal = invoiceTotal,
+                        PaystackCharge = charge,
+                        AmountCharged = amountToCharge
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                var message = ex.Message;
+                if (ex.InnerException != null) message += " | " + ex.InnerException.Message;
+                return new ApiResponse<PaymentInitializeResponseDTO> { Success = false, Message = message };
+            }
+        }
+
+        public ApiResponse<PaystackVerifyResponseDTO> VerifyPayment(string reference)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(reference))
+                    return new ApiResponse<PaystackVerifyResponseDTO>
+                    { Success = false, Message = "Reference is required" };
+
+                // 1. Call Paystack verify endpoint
+                string paystackResponse;
+                using (var client = new System.Net.Http.HttpClient())
+                {
+                    client.DefaultRequestHeaders.Authorization =
+                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", PaystackSecretKey);
+                    client.DefaultRequestHeaders.Accept.Add(
+                        new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+
+                    var response = client.GetAsync(
+                        $"https://api.paystack.co/transaction/verify/{Uri.EscapeDataString(reference)}").Result;
+
+                    paystackResponse = response.Content.ReadAsStringAsync().Result;
+
+                    if (!response.IsSuccessStatusCode)
+                        return new ApiResponse<PaystackVerifyResponseDTO>
+                        { Success = false, Message = $"Paystack error: {paystackResponse}" };
+                }
+
+                // 2. Parse response
+                dynamic parsed = Newtonsoft.Json.JsonConvert.DeserializeObject(paystackResponse);
+
+                if (parsed.status != true)
+                    return new ApiResponse<PaystackVerifyResponseDTO>
+                    { Success = false, Message = (string)parsed.message };
+
+                string txStatus = (string)parsed.data.status;        // "success", "failed", etc.
+                string invoiceID = (string)parsed.data.metadata.invoice_id;
+                string customerID = (string)parsed.data.metadata.customer_id;
+                decimal invoiceTotal = (decimal)parsed.data.metadata.invoice_total;
+                long amountKobo = (long)parsed.data.amount;
+                decimal amountPaid = amountKobo / 100m;
+                string txRef = (string)parsed.data.reference;
+                string txId = parsed.data.id?.ToString();
+
+                if (txStatus != "success")
+                    return new ApiResponse<PaystackVerifyResponseDTO>
+                    { Success = false, Message = $"Payment not successful. Status: {txStatus}" };
+
+                // 3. Idempotency — bail out if this reference was already processed
+                bool alreadyProcessed = db.CustomerPayments
+                    .Any(p => p.TransactionReference == txRef);
+
+                if (alreadyProcessed)
+                    return new ApiResponse<PaystackVerifyResponseDTO>
+                    {
+                        Success = true,
+                        Message = "Payment already recorded",
+                        Data = new PaystackVerifyResponseDTO
+                        {
+                            Success = true,
+                            InvoiceID = invoiceID,
+                            AmountPaid = amountPaid
+                        }
+                    };
+
+                // 4. Load invoice
+                var invoice = db.AccountInvoices.FirstOrDefault(i => i.ID == invoiceID);
+                if (invoice == null)
+                    return new ApiResponse<PaystackVerifyResponseDTO>
+                    { Success = false, Message = "Invoice not found" };
+
+                // 5. Mark invoice as paid
+                invoice.Paid = 1;
+                invoice.AmountPaid = invoiceTotal; // record the original invoice total, not the grossed-up amount
+                invoice.Ref = txRef;
+
+                // 6. Create CustomerPayment record
+                var payment = new CustomerPayment
+                {
+                    ID = Guid.NewGuid().ToString(),
+                    MyInvoice = invoiceID,
+                    Date = DateTime.Now,
+                    Method = "Online Payment",
+                    Particulars = $"Online Payment - Invoice #{invoiceID}",
+                    PaidBy = customerID,
+                    EnteredBy = customerID,
+                    Amount = invoiceTotal,
+                    Ref = txRef,
+                    CustomerID = customerID,
+                    Currency = "NGN",
+                    PaidStatus = 1,
+                    TransactionId = txId,
+                    TransactionReference = txRef,
+                    ProviderName = "Paystack",
+                    Post = 0,
+                    myserial = db.CustomerPayments.Any()
+                                           ? db.CustomerPayments.Max(x => x.myserial) + 1
+                                           : 1
+                };
+
+                db.CustomerPayments.Add(payment);
+                db.SaveChanges();
+
+                return new ApiResponse<PaystackVerifyResponseDTO>
+                {
+                    Success = true,
+                    Message = "Payment verified and recorded successfully",
+                    Data = new PaystackVerifyResponseDTO
+                    {
+                        Success = true,
+                        InvoiceID = invoiceID,
+                        AmountPaid = amountPaid,
+                        Message = "Payment successful"
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                var message = ex.Message;
+                if (ex.InnerException != null) message += " | " + ex.InnerException.Message;
+                return new ApiResponse<PaystackVerifyResponseDTO> { Success = false, Message = message };
+            }
+        }
+
+        public ApiResponse<string> HandleWebhook(string rawBody, string paystackSignature)
+        {
+            try
+            {
+                // 1. Verify HMAC-SHA512 signature
+                var keyBytes = System.Text.Encoding.UTF8.GetBytes(PaystackSecretKey);
+                var bodyBytes = System.Text.Encoding.UTF8.GetBytes(rawBody);
+
+                string computedHash;
+                using (var hmac = new System.Security.Cryptography.HMACSHA512(keyBytes))
+                {
+                    byte[] hashBytes = hmac.ComputeHash(bodyBytes);
+                    computedHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLower();
+                }
+
+                if (computedHash != paystackSignature?.ToLower())
+                    return new ApiResponse<string> { Success = false, Message = "Invalid signature" };
+
+                // 2. Parse event
+                dynamic payload = Newtonsoft.Json.JsonConvert.DeserializeObject(rawBody);
+
+                string eventType = (string)payload.@event;
+
+                // Only handle charge.success — ignore everything else silently
+                if (eventType != "charge.success")
+                    return new ApiResponse<string> { Success = true, Message = "Event ignored" };
+
+                string txStatus = (string)payload.data.status;
+                string txRef = (string)payload.data.reference;
+                string txId = payload.data.id?.ToString();
+                string invoiceID = (string)payload.data.metadata.invoice_id;
+                string customerID = (string)payload.data.metadata.customer_id;
+                decimal invoiceTotal = (decimal)payload.data.metadata.invoice_total;
+                long amountKobo = (long)payload.data.amount;
+                decimal amountPaid = amountKobo / 100m;
+
+                if (txStatus != "success")
+                    return new ApiResponse<string> { Success = false, Message = "Transaction not successful" };
+
+                // 3. Idempotency — if already processed, return 200 OK (Paystack retries on non-200)
+                bool alreadyProcessed = db.CustomerPayments
+                    .Any(p => p.TransactionReference == txRef);
+
+                if (alreadyProcessed)
+                    return new ApiResponse<string> { Success = true, Message = "Already processed" };
+
+                // 4. Load invoice
+                var invoice = db.AccountInvoices.FirstOrDefault(i => i.ID == invoiceID);
+                if (invoice == null)
+                    return new ApiResponse<string> { Success = false, Message = "Invoice not found" };
+
+                // 5. Mark invoice as paid
+                invoice.Paid = 1;
+                invoice.AmountPaid = invoiceTotal;
+                invoice.Ref = txRef;
+
+                // 6. Create CustomerPayment record
+                var payment = new CustomerPayment
+                {
+                    ID = Guid.NewGuid().ToString(),
+                    MyInvoice = invoiceID,
+                    Date = DateTime.Now,
+                    Method = "Online Payment",
+                    Particulars = $"Online Payment - Invoice #{invoiceID}",
+                    PaidBy = customerID,
+                    EnteredBy = customerID,
+                    Amount = invoiceTotal,
+                    Ref = txRef,
+                    CustomerID = customerID,
+                    Currency = "NGN",
+                    PaidStatus = 1,
+                    TransactionId = txId,
+                    TransactionReference = txRef,
+                    ProviderName = "Paystack",
+                    Post = 0,
+                    myserial = db.CustomerPayments.Any()
+                                           ? db.CustomerPayments.Max(x => x.myserial) + 1
+                                           : 1
+                };
+
+                db.CustomerPayments.Add(payment);
+                db.SaveChanges();
+
+                return new ApiResponse<string> { Success = true, Message = "Webhook processed successfully" };
+            }
+            catch (Exception ex)
+            {
+                var message = ex.Message;
+                if (ex.InnerException != null) message += " | " + ex.InnerException.Message;
+                return new ApiResponse<string> { Success = false, Message = message };
+            }
+        }
+
 
         // ========================
         // MAPPERS
