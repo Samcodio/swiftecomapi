@@ -54,6 +54,26 @@ namespace SwiftEcom.Controllers
             }
         }
 
+        [HttpGet]
+        [Route("api/stores/bycompany")]
+        public IHttpActionResult GetStoresByCompany()
+        {
+            using (SwiftEntities db = new SwiftEntities())
+            {
+                var stores = db.Stores
+                    .Where(s => s.MyCompany == "a58ee555-1b6e-4f37")
+                    .Select(s => new { s.ID, s.StoreName })
+                    .ToList();
+
+                if (!stores.Any())
+                {
+                    return NotFound();
+                }
+
+                return Ok(stores);
+            }
+        }
+
 
         // POST /auth/signup
         [HttpPost]
